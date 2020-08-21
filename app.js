@@ -15,23 +15,14 @@ app.use(express.static('build'))
 morgan.token('cont', function (req, res) { return JSON.stringify(req.body)})
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :cont'))
 
-const errorHandler = (error, req, res, next) => {
-	if (error.name === 'CastError' && error.kind === 'ObjectId') {
-		return res.status(400).send({ error: 'Malformed ID' })
-	} else if (error.name === 'ValidationError') {
-		return res.status(400).json({ error: error.message })
-	}
-	next(error)
-}
 
-app.use(errorHandler)
 
 app.get('/api/persons', function(req, res) {
 	Person.find({})
 		.then(per => {
 			res.json(per)
 		})
-		.catch(err => console.log(err))
+		.catch(err => next(err))
 })
 
 app.get('/api/persons/:id', function(req, res, next) {
@@ -85,8 +76,8 @@ app.post('/api/persons', function(req, res, next) {
 app.put('/api/persons/:id', (request, response, next) => {
 
 	const person = {
-		name: req.body.name,
-		number: req.body.number,
+		name: request.body.name,
+		number: request.body.number,
 	}
 
 	Person.findByIdAndUpdate(request.params.id, person, { new: true })
@@ -95,6 +86,8 @@ app.put('/api/persons/:id', (request, response, next) => {
 		})
 		.catch(error => next(err))
 })
+
+
 app.get('/info', function (req, res) {
 	Person.countDocuments().then(amount => {
 		res.send(
@@ -103,6 +96,16 @@ app.get('/info', function (req, res) {
 	})
 })
 
+const errorHandler = (error, req, res, next) => {
+	if (error.name === 'CastError' && error.kind === 'ObjectId') {
+		return res.status(400).send({ error: 'Malformed ID' })
 
+	} else if (error.name === 'ValidationError') {
+		return res.status(400).json({ error: error.message })
+	}
+	next(error)
+}
+
+app.use(errorHandler)
 
 app.listen(PORT, () => console.log(`Example app listening at http://localhost:${PORT}`))
